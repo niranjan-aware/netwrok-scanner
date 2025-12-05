@@ -22,8 +22,9 @@ public class PortResult {
     @Column(nullable = false)
     private Integer port;
     
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Boolean isOpen;
+    private PortStatus status;  // OPEN, CLOSED, FILTERED
     
     private String service;
     
@@ -32,8 +33,23 @@ public class PortResult {
     
     private Integer responseTime;
     
+    @Column(columnDefinition = "TEXT")
+    private String errorMessage;  // For closed/filtered ports
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "scan_job_id", nullable = false)
     @JsonIgnore
     private ScanJob scanJob;
+    
+    // Enum for port status
+    public enum PortStatus {
+        OPEN,       // Connection successful
+        CLOSED,     // Connection refused (RST packet)
+        FILTERED    // Connection timeout (no response)
+    }
+    
+    // Backward compatibility helper
+    public Boolean getIsOpen() {
+        return status == PortStatus.OPEN;
+    }
 }

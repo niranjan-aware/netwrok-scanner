@@ -40,6 +40,8 @@ public class ScanJobService {
                 .totalPorts(ports.size())
                 .scannedPorts(0)
                 .openPorts(0)
+                .closedPorts(0)
+                .filteredPorts(0)
                 .build();
         
         job = scanJobRepository.save(job);
@@ -61,20 +63,36 @@ public class ScanJobService {
             
             log.info("Starting scan for job {} - Target: {}, Ports: {}", jobId, target, ports.size());
             
+            // Scan all ports (including closed and filtered)
             List<PortResult> results = portScanner.scanPorts(target, ports);
             
             // Associate results with job
             results.forEach(result -> result.setScanJob(job));
             job.setResults(results);
             job.setScannedPorts(ports.size());
-            job.setOpenPorts((int) results.stream().filter(PortResult::getIsOpen).count());
+            
+            // Count by status
+            long openCount = results.stream()
+                    .filter(r -> r.getStatus() == PortResult.PortStatus.OPEN)
+                    .count();
+            long closedCount = results.stream()
+                    .filter(r -> r.getStatus() == PortResult.PortStatus.CLOSED)
+                    .count();
+            long filteredCount = results.stream()
+                    .filter(r -> r.getStatus() == PortResult.PortStatus.FILTERED)
+                    .count();
+            
+            job.setOpenPorts((int) openCount);
+            job.setClosedPorts((int) closedCount);
+            job.setFilteredPorts((int) filteredCount);
             job.setProgress(100);
             job.setStatus(ScanJob.ScanStatus.COMPLETED);
             job.setCompletedAt(LocalDateTime.now());
             
             scanJobRepository.save(job);
             
-            log.info("Scan completed for job {} - Open ports: {}", jobId, job.getOpenPorts());
+            log.info("Scan completed for job {} - Open: {}, Closed: {}, Filtered: {}", 
+                     jobId, openCount, closedCount, filteredCount);
             
         } catch (Exception e) {
             log.error("Scan failed for job {}: {}", jobId, e.getMessage(), e);
@@ -114,6 +132,14 @@ public class ScanJobService {
             return config.getCommonPorts();
         }
         
+        if ("all".equalsIgnoreCase(portRange)) {
+            // All ports 1-65535 (use with caution!)
+            for (int i = 1; i <= 65535; i++) {
+                ports.add(i);
+            }
+            return ports;
+        }
+        
         String[] parts = portRange.split(",");
         for (String part : parts) {
             part = part.trim();
@@ -133,6 +159,20 @@ public class ScanJobService {
     }
     
     private ScanResponse mapToResponse(ScanJob job) {
+        ScanResponse.PortStatistics stats = null;
+        
+        if (job.getTotalPorts() != null && job.getTotalPorts() > 0) {
+            int total = job.getTotalPorts();
+            stats = ScanResponse.PortStatistics.builder()
+                    .openCount(job.getOpenPorts())
+                    .closedCount(job.getClosedPorts())
+                    .filteredCount(job.getFilteredPorts())
+                    .openPercentage(job.getOpenPorts() * 100.0 / total)
+                    .closedPercentage(job.getClosedPorts() * 100.0 / total)
+                    .filteredPercentage(job.getFilteredPorts() * 100.0 / total)
+                    .build();
+        }
+        
         return ScanResponse.builder()
                 .jobId(job.getId())
                 .target(job.getTarget())
@@ -142,8 +182,11 @@ public class ScanJobService {
                 .totalPorts(job.getTotalPorts())
                 .scannedPorts(job.getScannedPorts())
                 .openPorts(job.getOpenPorts())
+                .closedPorts(job.getClosedPorts())
+                .filteredPorts(job.getFilteredPorts())
                 .createdAt(job.getCreatedAt())
                 .completedAt(job.getCompletedAt())
+                .statistics(stats)
                 .build();
     }
 }

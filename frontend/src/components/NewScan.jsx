@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Play, Clock } from 'lucide-react';
 import { scanAPI } from '../services/api';
@@ -7,6 +8,8 @@ const NewScan = ({ onScanStarted }) => {
     target: '',
     portRange: 'common',
     timeout: 2000,
+    includeClosedPorts: true,
+    includeFilteredPorts: true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -19,7 +22,13 @@ const NewScan = ({ onScanStarted }) => {
     try {
       const response = await scanAPI.startScan(formData);
       onScanStarted(response.data);
-      setFormData({ target: '', portRange: 'common', timeout: 2000 });
+      setFormData({ 
+        target: '', 
+        portRange: 'common', 
+        timeout: 2000,
+        includeClosedPorts: true,
+        includeFilteredPorts: true,
+      });
     } catch (err) {
       setError(err.response?.data?.target || err.response?.data?.portRange || 'Failed to start scan');
     } finally {
@@ -64,9 +73,10 @@ const NewScan = ({ onScanStarted }) => {
             onChange={(e) => setFormData({ ...formData, portRange: e.target.value })}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="common">Common Ports (80, 443, 22, etc.)</option>
+            <option value="common">Common Ports (17 ports)</option>
+            <option value="1-100">Quick Scan: 1-100</option>
             <option value="1-1000">Port Range: 1-1000</option>
-            <option value="1-65535">All Ports: 1-65535</option>
+            <option value="1-10000">Extended: 1-10000</option>
           </select>
           <input
             type="text"
@@ -98,6 +108,34 @@ const NewScan = ({ onScanStarted }) => {
           />
           <p className="mt-1 text-xs text-gray-500">
             Connection timeout in milliseconds (500-10000)
+          </p>
+        </div>
+
+        <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+          <p className="text-sm font-medium text-gray-700">Port Status Options</p>
+          
+          <label className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={formData.includeClosedPorts}
+              onChange={(e) => setFormData({ ...formData, includeClosedPorts: e.target.checked })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Include Closed Ports (connection refused)</span>
+          </label>
+          
+          <label className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={formData.includeFilteredPorts}
+              onChange={(e) => setFormData({ ...formData, includeFilteredPorts: e.target.checked })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Include Filtered Ports (timeout/firewall)</span>
+          </label>
+          
+          <p className="text-xs text-gray-500 mt-2">
+            Note: Including closed and filtered ports will show all scanned ports regardless of status
           </p>
         </div>
 

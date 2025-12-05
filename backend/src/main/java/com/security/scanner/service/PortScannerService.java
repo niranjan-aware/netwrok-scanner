@@ -9,12 +9,13 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
+import java.net.ConnectException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Semaphore;
 
 @Service
 @RequiredArgsConstructor
@@ -26,7 +27,7 @@ public class PortScannerService {
     
     public List<PortResult> scanPorts(String target, List<Integer> ports) {
         List<PortResult> results = new ArrayList<>();
-        Semaphore semaphore = new Semaphore(200);
+        
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<CompletableFuture<PortResult>> futures = ports.stream()
                     .map(port -> CompletableFuture.supplyAsync(() -> scanPort(target, port), executor))
@@ -54,7 +55,7 @@ public class PortScannerService {
             socket.connect(new InetSocketAddress(target, port), config.getDefaultTimeout());
             long responseTime = System.currentTimeMillis() - startTime;
             
-            // Port is open, grab banner
+            // Port is OPEN
             String banner = bannerGrabber.grabBanner(socket, port);
             String service = identifyService(port, banner);
             
@@ -62,15 +63,53 @@ public class PortScannerService {
             
             return PortResult.builder()
                     .port(port)
-                    .isOpen(true)
+                    .status(PortResult.PortStatus.OPEN)
                     .service(service)
                     .banner(banner)
                     .responseTime((int) responseTime)
                     .build();
             
+        } catch (SocketTimeoutException e) {
+            // Port is FILTERED (firewall blocking, no response)
+            long responseTime = System.currentTimeMillis() - startTime;
+            
+            log.debug("Port {} is FILTERED on {} (timeout)", port, target);
+            
+            return PortResult.builder()
+                    .port(port)
+                    .status(PortResult.PortStatus.FILTERED)
+                    .service(getDefaultService(port))
+                    .responseTime((int) responseTime)
+                    .errorMessage("Connection timeout - port may be filtered by firewall")
+                    .build();
+            
+        } catch (ConnectException e) {
+            // Port is CLOSED (connection refused - RST packet)
+            long responseTime = System.currentTimeMillis() - startTime;
+            
+            log.debug("Port {} is CLOSED on {} (connection refused)", port, target);
+            
+            return PortResult.builder()
+                    .port(port)
+                    .status(PortResult.PortStatus.CLOSED)
+                    .service(getDefaultService(port))
+                    .responseTime((int) responseTime)
+                    .errorMessage("Connection refused - port is closed")
+                    .build();
+            
         } catch (IOException e) {
-            // Port is closed or filtered
-            return null;
+            // Other network errors - treat as FILTERED
+            long responseTime = System.currentTimeMillis() - startTime;
+            
+            log.debug("Port {} error on {}: {}", port, target, e.getMessage());
+            
+            return PortResult.builder()
+                    .port(port)
+                    .status(PortResult.PortStatus.FILTERED)
+                    .service(getDefaultService(port))
+                    .responseTime((int) responseTime)
+                    .errorMessage("Network error: " + e.getMessage())
+                    .build();
         }
     }
     

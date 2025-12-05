@@ -40,7 +40,12 @@ public class ScanJob {
     
     private Integer scannedPorts;
     
+    // NEW: Track counts by status
     private Integer openPorts;
+    
+    private Integer closedPorts;
+    
+    private Integer filteredPorts;
     
     @CreationTimestamp
     private LocalDateTime createdAt;

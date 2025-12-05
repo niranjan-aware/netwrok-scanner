@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Activity, Shield, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Activity, Shield, AlertCircle, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { dashboardAPI } from '../services/api';
 
 const Dashboard = () => {
@@ -85,15 +86,22 @@ const Dashboard = () => {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Quick Stats</h3>
+          <h3 className="text-lg font-semibold mb-4">Port Status Summary</h3>
           <div className="space-y-3">
             <QuickStat
-              label="Average Scan Time"
-              value="2.5 min"
+              icon={<CheckCircle className="w-4 h-4 text-green-500" />}
+              label="Open Ports Found"
+              value="View in History"
             />
             <QuickStat
-              label="Most Scanned Port"
-              value="80 (HTTP)"
+              icon={<XCircle className="w-4 h-4 text-red-500" />}
+              label="Closed Ports"
+              value="Tracked"
+            />
+            <QuickStat
+              icon={<Shield className="w-4 h-4 text-orange-500" />}
+              label="Filtered Ports"
+              value="Detected"
             />
           </div>
         </div>
@@ -131,9 +139,12 @@ const ActivityItem = ({ label, value }) => (
   </div>
 );
 
-const QuickStat = ({ label, value }) => (
-  <div className="flex justify-between items-center py-2 border-b border-gray-100">
-    <span className="text-sm text-gray-600">{label}</span>
+const QuickStat = ({ icon, label, value }) => (
+  <div className="flex items-center justify-between py-2 border-b border-gray-100">
+    <div className="flex items-center space-x-2">
+      {icon}
+      <span className="text-sm text-gray-600">{label}</span>
+    </div>
     <span className="text-sm font-medium text-gray-800">{value}</span>
   </div>
 );

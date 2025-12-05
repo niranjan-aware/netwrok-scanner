@@ -13,9 +13,14 @@ public class ScanRequest {
     private String target;
     
     @NotBlank(message = "Port range cannot be empty")
-    @Pattern(regexp = "^([0-9]+(-[0-9]+)?)(,([0-9]+(-[0-9]+)?))*$|^common$",
-            message = "Invalid port range format. Use: 80,443,8080-8090 or 'common'")
+    @Pattern(regexp = "^([0-9]+(-[0-9]+)?)(,([0-9]+(-[0-9]+)?))*$|^common$|^all$",
+            message = "Invalid port range format. Use: 80,443,8080-8090 or 'common' or 'all'")
     private String portRange;
     
     private Integer timeout;
+    
+    // NEW: Option to include closed/filtered ports
+    private Boolean includeClosedPorts = true;  // Default: show all
+    
+    private Boolean includeFilteredPorts = true;  // Default: show all
 }
