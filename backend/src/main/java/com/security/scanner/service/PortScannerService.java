@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Semaphore;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +26,7 @@ public class PortScannerService {
     
     public List<PortResult> scanPorts(String target, List<Integer> ports) {
         List<PortResult> results = new ArrayList<>();
-        
+        Semaphore semaphore = new Semaphore(200);
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             List<CompletableFuture<PortResult>> futures = ports.stream()
                     .map(port -> CompletableFuture.supplyAsync(() -> scanPort(target, port), executor))
