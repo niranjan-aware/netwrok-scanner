@@ -1,0 +1,56 @@
+spring:
+  application:
+    name: network-scanner
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scanner_db
+    username: scanner_user
+    password: scanner_pass
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+  
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+
+scanner:
+  default-timeout: 2000
+  max-concurrent-ports: 500
+  max-concurrent-hosts: 10
+  rate-limit-delay: 10
+  
+  common-ports:
+    - 21    # FTP
+    - 22    # SSH
+    - 23    # Telnet
+    - 25    # SMTP
+    - 53    # DNS
+    - 80    # HTTP
+    - 110   # POP3
+    - 143   # IMAP
+    - 443   # HTTPS
+    - 445   # SMB
+    - 3306  # MySQL
+    - 3389  # RDP
+    - 5432  # PostgreSQL
+    - 6379  # Redis
+    - 8080  # HTTP-Alt
+    - 8443  # HTTPS-Alt
+    - 27017 # MongoDB
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
